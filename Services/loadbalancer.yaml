@@ -1,6 +1,6 @@
 
 ###############################
-### NGINX working and exposinh with an extrnal ip using loadBalancer must use(cmd: minikube tunnel) 
+### NGINX working and exposed with an external ip using loadBalancer. Must use(cmd: minikube tunnel) 
 ###############################
 
 apiVersion: v1

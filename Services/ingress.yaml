@@ -1,0 +1,85 @@
+#################################
+# An Ingress does not expose arbitrary ports or protocols. 
+# Exposing services other than HTTP and HTTPS to the internet typically uses a service of type Service.
+# Type=NodePort or Service.Type=LoadBalancer.
+#################################
+
+################################
+## Enable minikube addons enable ingress
+# Commands:
+#
+# minikube addons enable ingress
+#
+# kubectl get pods -n ingress-nginx (See if nginx is running)
+#
+################################
+################################
+#
+# Service running in http://(minikube ip):80/
+#
+################################
+
+
+#Ingress
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ingress-nginx-minikube
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+#  ingressClassName: nginx-example
+  rules:
+  - host: nginx-ingress
+  - http:
+      paths:
+      - path: /
+        pathType: Exact
+        backend:
+          service:
+            name: nginx-service
+            port:
+              number: 8080
+---
+################################
+#Internal service of the nginx
+################################
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-service
+spec:
+  selector:
+    app: nginx
+#  type: NodePort
+  ports:
+    - protocol: TCP
+      port: 8080 # The new service port that will be created to connect to the application.
+      targetPort: 80
+      name: http
+---
+################################
+#Deployment of the Nginx
+################################
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-deployment
+  labels:
+    app: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.14.2
+        ports:
+        - containerPort: 80
