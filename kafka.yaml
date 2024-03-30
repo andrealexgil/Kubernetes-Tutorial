@@ -1,0 +1,154 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka1-service
+spec:
+  selector:
+    app: kafka1
+  type: LoadBalancer
+  ports:
+    - port: 9093
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka1-deployment
+  labels:
+    app: kafka1
+spec:
+  selector:
+    matchLabels:
+      app: kafka1
+  template:
+    metadata:
+      labels:
+        app: kafka1
+    spec:
+      containers:
+      - name: kafka1
+        image: bitnami/kafka:3.6.1
+        ports:
+          - containerPort: 9092
+          - containerPort: 9093
+          - containerPort: 9094
+        env:
+        #Kubernetes
+          - name: MY_POD_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.podIP
+          - name: APPLICATION_SERVER
+            value: "$(MY_POD_IP):8080"
+          - name: MY_POD_HOST_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: SERVER_HOST_IP
+            value: "$(MY_POD_HOST_IP):8080"
+
+        # KAFKA
+          - name: BITNAMI_DEBUG
+            value: "yes"
+          - name: ALLOW_PLAINTEXT_LISTENER
+            value: "yes"
+          - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
+            value: INTERNAL:PLAINTEXT, CONTROLLER:PLAINTEXT, EXTERNAL:PLAINTEXT
+          - name: KAFKA_CFG_LISTENERS
+            value: INTERNAL://:9092, CONTROLLER://:9093, EXTERNAL://:9094
+          - name: KAFKA_CFG_ADVERTISED_LISTENERS
+            value: INTERNAL://kafka-service:9092, EXTERNAL://$(MY_POD_HOST_IP):9094
+          - name: KAFKA_CFG_INTER_BROKER_LISTENER_NAME
+            value: INTERNAL
+          - name: KAFKA_CFG_NUM_PARTITIONS
+            value: "3"
+          #KRaft
+          - name: KAFKA_CFG_NODE_ID
+            value: "1"
+          - name: KAFKA_KRAFT_CLUSTER_ID
+            value: OTMwNzFhYTY1ODNiNGE5OT
+          - name: KAFKA_CFG_PROCESS_ROLES
+            value: controller,broker
+          - name: KAFKA_CFG_CONTROLLER_QUORUM_VOTERS
+            value: 1@kafka1-service:9093,2@kafka2-service:9093
+          - name: KAFKA_CFG_CONTROLLER_LISTENER_NAMES
+            value: CONTROLLER
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka2-service
+spec:
+  selector:
+    app: kafka2
+  type: LoadBalancer
+  ports:
+    - port: 9093
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka2-deployment
+  labels:
+    app: kafka2
+spec:
+  selector:
+    matchLabels:
+      app: kafka2
+  template:
+    metadata:
+      labels:
+        app: kafka2
+    spec:
+      containers:
+      - name: kafka2
+        image: bitnami/kafka:3.6.1
+        ports:
+          - containerPort: 9092
+          - containerPort: 9093
+        env:
+          - name: BITNAMI_DEBUG
+            value: "yes"
+          - name: ALLOW_PLAINTEXT_LISTENER
+            value: "yes"
+          - name: KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP
+            value: INTERNAL:PLAINTEXT, CONTROLLER:PLAINTEXT
+          - name: KAFKA_CFG_LISTENERS
+            value: INTERNAL://:9092, CONTROLLER://:9093
+          - name: KAFKA_CFG_ADVERTISED_LISTENERS
+            value: INTERNAL://kafka-service:9092
+          - name: KAFKA_CFG_INTER_BROKER_LISTENER_NAME
+            value: INTERNAL
+          - name: KAFKA_CFG_NUM_PARTITIONS
+            value: "3"
+          #KRaft
+          - name: KAFKA_CFG_NODE_ID
+            value: "2"
+          - name: KAFKA_KRAFT_CLUSTER_ID
+            value: OTMwNzFhYTY1ODNiNGE5OT
+          - name: KAFKA_CFG_PROCESS_ROLES
+            value: controller,broker
+          - name: KAFKA_CFG_CONTROLLER_QUORUM_VOTERS
+            value: 1@kafka1-service:9093,2@kafka2-service:9093
+          - name: KAFKA_CFG_CONTROLLER_LISTENER_NAMES
+            value: CONTROLLER
+#---
+#apiVersion: autoscaling/v2
+#kind: HorizontalPodAutoscaler
+#metadata:
+#  name: hpa-nginx
+#  namespace: default
+#spec:
+#  scaleTargetRef:
+#    apiVersion: apps/v1
+#    kind: Deployment
+#    name: nginx-deployment
+#  minReplicas: 1
+#  maxReplicas: 3
+#  metrics:
+#  - type: Resource
+#    resource:
+#      name: cpu
+#      target:
+#        type: Utilization
+#        averageUtilization: 10
