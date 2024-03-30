@@ -1,0 +1,112 @@
+version: '3.3'
+networks:
+    kafka-cluster-net:
+        driver: bridge
+services:
+
+#    schema-registery:
+#        image: 'docker.io/confluentinc/cp-schema-registry:latest-ubi8'
+#        container_name: streaming-data
+#        ports:
+#          - '8085:8085'
+#        volumes:
+#          - 'streaming-datadata:/bitnami'
+#        environment:
+#          - SCHEMA_REGISTRY_HOST_NAME=schemaregistry
+#          - SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS=PLAINTEXT://streaming-control:19092
+#           - SCHEMA_REGISTRY_KAFKA_BROKERS=PLAINTEXT://localhost:9092,PLAINTEXT://localhost:9094
+#        networks:
+#          - kafka-cluster-net
+#        depends_on:
+#          - streaming-data
+#          - streaming-control
+
+    streaming-data:
+        image: 'docker.io/bitnami/kafka:3.2.3'
+        container_name: streaming-data
+        ports:
+          - '9092:9092'
+          - '29092:29092'
+        volumes:
+          - 'streaming-datadata:/bitnami'
+        environment:
+          - KAFKA_CFG_BROKER_ID=1
+          - BITNAMI_DEBUG=yes
+          - ALLOW_PLAINTEXT_LISTENER=yes
+          - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT,LOCALHOST:PLAINTEXT
+          - KAFKA_CFG_LISTENERS=INTERNAL://:9092,CONTROLLER://:9094,LOCALHOST://:39093
+          - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://streaming-data:9092,LOCALHOST://127.0.0.1:39093
+          - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+          - KAFKA_CFG_NUM_PARTITIONS=3
+#          - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+          #KRaft
+          - KAFKA_ENABLE_KRAFT=yes
+          - KAFKA_KRAFT_CLUSTER_ID=OTMwNzFhYTY1ODNiNGE5OT
+          - KAFKA_CFG_NODE_ID=1
+          - KAFKA_CFG_PROCESS_ROLES=controller,broker
+          - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@streaming-data:9094,2@streaming-control:9094,3@streaming:9094
+          - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+        networks:
+          - kafka-cluster-net
+    streaming-control:
+      image: 'docker.io/bitnami/kafka:3.2.3'
+      container_name: streaming-control
+      deploy:
+      ports:
+      #host_port:container_port
+        - '9091:9092'
+        - '39093:39093'
+      volumes:
+        - 'streaming-controldata:/bitnami'
+      environment:
+        - KAFKA_CFG_BROKER_ID=2
+        - BITNAMI_DEBUG=yes
+        - ALLOW_PLAINTEXT_LISTENER=yes
+        - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT,LOCALHOST:PLAINTEXT
+        - KAFKA_CFG_LISTENERS=INTERNAL://:9092,CONTROLLER://:9094,LOCALHOST://:39093
+        - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://streaming-control:9092,LOCALHOST://127.0.0.1:39093
+        - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+        - KAFKA_CFG_NUM_PARTITIONS=3
+        #KRaft
+        - KAFKA_ENABLE_KRAFT=yes
+        - KAFKA_KRAFT_CLUSTER_ID=OTMwNzFhYTY1ODNiNGE5OT
+        - KAFKA_CFG_NODE_ID=2
+        - KAFKA_CFG_PROCESS_ROLES=controller,broker
+        - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@streaming-data:9094,2@streaming-control:9094,3@streaming:9094
+        - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      networks:
+        - kafka-cluster-net
+    streaming:
+      image: 'docker.io/bitnami/kafka:3.2.3'
+      container_name: streaming
+      deploy:
+      ports:
+         - '9094:9094'
+         - '9093:9092'
+      volumes:
+         - 'streamingdata:/bitnami'
+      environment:
+        - KAFKA_CFG_BROKER_ID=3
+        - BITNAMI_DEBUG=yes
+        - ALLOW_PLAINTEXT_LISTENER=yes
+        - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT,LOCALHOST:PLAINTEXT
+        - KAFKA_CFG_LISTENERS=INTERNAL://:9092,CONTROLLER://:9094,LOCALHOST://:39093
+        - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://streaming:9093,LOCALHOST://127.0.0.1:39093
+        - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
+        - KAFKA_CFG_NUM_PARTITIONS=3
+        #KRaft
+        - KAFKA_ENABLE_KRAFT=yes
+        - KAFKA_KRAFT_CLUSTER_ID=OTMwNzFhYTY1ODNiNGE5OT
+        - KAFKA_CFG_NODE_ID=3
+        - KAFKA_CFG_PROCESS_ROLES=controller,broker
+        - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@streaming-data:9094,2@streaming-control:9094,3@streaming:9094
+        - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      networks:
+        - kafka-cluster-net
+volumes:
+    streaming-datadata:
+        driver: local
+    streaming-controldata:
+        driver: local
+    streamingdata:
+        driver: local
